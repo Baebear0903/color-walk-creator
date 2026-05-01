@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   classifyAssetLayout,
   computeMediaCropRect,
+  computeOutputSizeFromCrop,
   createPosterState,
   getAllowedPalettePositions,
   splitContentLines,
@@ -56,6 +57,27 @@ test('computeMediaCropRect center-crops 4:3 and 3:4 media to 3:2 and 2:3', () =>
     y: 0,
     width: 2667,
     height: 4000,
+  });
+});
+
+test('computeOutputSizeFromCrop matches landscape media crop clarity', () => {
+  assert.deepEqual(computeOutputSizeFromCrop({ width: 3000, height: 2000 }, 'landscape'), {
+    width: 3000,
+    height: 4000,
+  });
+});
+
+test('computeOutputSizeFromCrop matches portrait media crop clarity', () => {
+  assert.deepEqual(computeOutputSizeFromCrop({ width: 2000, height: 3000 }, 'portrait'), {
+    width: 4000,
+    height: 3000,
+  });
+});
+
+test('computeOutputSizeFromCrop constrains oversized output for mobile browsers', () => {
+  assert.deepEqual(computeOutputSizeFromCrop({ width: 6000, height: 4000 }, 'landscape'), {
+    width: 3072,
+    height: 4096,
   });
 });
 

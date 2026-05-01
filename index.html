@@ -11,32 +11,20 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <section class="studio">
-        <header class="topbar">
-          <div>
-            <p class="kicker">Colorwalk</p>
-            <h1>一键生成色彩打卡图</h1>
-          </div>
-          <span class="live-chip">静态图</span>
-        </header>
-
-        <div class="preview-stage" aria-label="作品预览">
-          <canvas id="preview" width="540" height="720"></canvas>
-          <div id="empty-preview" class="preview-hint">
-            <span>上传素材后自动取色</span>
-          </div>
-        </div>
-
-        <p id="status" class="status">上传一张静态图片，生成后长按成图保存。</p>
-      </section>
-
-      <section class="controls" aria-label="编辑控制台">
+    <main id="app-shell" class="app-shell" data-has-asset="false">
+      <section class="entry-panel" aria-label="上传图片">
         <label class="upload-zone">
           <input id="file-input" type="file" accept="image/*" />
           <span class="upload-icon">+</span>
-          <span id="upload-label">选择静态图片</span>
+          <span id="upload-label">上传图片</span>
         </label>
+      </section>
+
+      <section class="workspace" aria-label="Colorwalk 编辑区">
+        <figure id="result-panel" class="result-panel" hidden>
+          <img id="result-image" alt="生成的 Colorwalk 静态图片" />
+          <figcaption>高清图片实时更新，长按保存</figcaption>
+        </figure>
 
         <div class="field-row">
           <label>
@@ -44,11 +32,6 @@
             <input id="color-input" type="color" value="#ff6b9a" />
           </label>
           <strong id="color-hex">#FF6B9A</strong>
-        </div>
-
-        <div class="color-tools" aria-label="主色取色方式">
-          <button id="auto-color-button" class="secondary-button" type="button" disabled>使用自动主色</button>
-          <button id="pick-color-button" class="secondary-button" type="button" disabled>点选取色</button>
         </div>
 
         <div id="swatches" class="swatches" aria-label="候选主色"></div>
@@ -68,15 +51,10 @@
           <select id="font-select"></select>
         </label>
 
-        <div class="actions">
-          <button id="generate-button" class="primary-button" type="button">生成静态图片</button>
-        </div>
-
-        <figure id="result-panel" class="result-panel" hidden>
-          <img id="result-image" alt="生成的 Colorwalk 静态图片" />
-          <figcaption>长按图片保存到相册</figcaption>
-        </figure>
+        <label class="reupload-link" for="file-input">重新上传</label>
       </section>
+
+      <p id="status" class="status" aria-live="polite"></p>
     </main>
 
     <script type="module" src="./src/app.mjs"></script>

@@ -1,5 +1,7 @@
 export const LANDSCAPE_OUTPUT = { width: 1080, height: 1440 };
 export const PORTRAIT_OUTPUT = { width: 1440, height: 1080 };
+export const MAX_OUTPUT_PIXELS = 16_000_000;
+export const MAX_OUTPUT_SIDE = 4096;
 
 const TARGET_RATIOS = {
   landscape: 3 / 2,
@@ -43,6 +45,26 @@ export function computeMediaCropRect(width, height, orientation) {
     y: Math.round((height - croppedHeight) / 2),
     width,
     height: croppedHeight,
+  };
+}
+
+export function computeOutputSizeFromCrop(cropRect, orientation, {
+  maxPixels = MAX_OUTPUT_PIXELS,
+  maxSide = MAX_OUTPUT_SIDE,
+} = {}) {
+  const sourceWidth = Math.max(1, Math.round(cropRect?.width || LANDSCAPE_OUTPUT.width));
+  const sourceHeight = Math.max(1, Math.round(cropRect?.height || LANDSCAPE_OUTPUT.height));
+  const output = orientation === 'portrait'
+    ? { width: Math.round(sourceHeight * (4 / 3)), height: sourceHeight }
+    : { width: sourceWidth, height: Math.round(sourceWidth * (4 / 3)) };
+
+  const sideScale = Math.min(1, maxSide / Math.max(output.width, output.height));
+  const pixelScale = Math.min(1, Math.sqrt(maxPixels / Math.max(1, output.width * output.height)));
+  const scale = Math.min(sideScale, pixelScale);
+
+  return {
+    width: Math.max(1, Math.round(output.width * scale)),
+    height: Math.max(1, Math.round(output.height * scale)),
   };
 }
 

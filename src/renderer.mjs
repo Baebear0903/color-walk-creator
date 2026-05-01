@@ -1,5 +1,5 @@
 import { pickReadableTextColor } from './color.mjs';
-import { classifyAssetLayout, splitContentLines } from './layout.mjs';
+import { classifyAssetLayout, computeOutputSizeFromCrop, splitContentLines } from './layout.mjs';
 import { getAssetSource } from './media.mjs';
 
 export function createPosterCanvas() {
@@ -16,9 +16,10 @@ export function renderPoster(canvas, asset, state, frame = 0) {
   const textColor = state.textColor || pickReadableTextColor(color);
   const layout = classifyAssetLayout(asset.width, asset.height);
   const palettePosition = state.palettePosition || layout.defaultPalettePosition;
+  const outputSize = computeOutputSizeFromCrop(asset.cropRect, asset.orientation);
 
-  canvas.width = layout.outputWidth;
-  canvas.height = layout.outputHeight;
+  canvas.width = outputSize.width;
+  canvas.height = outputSize.height;
   context.clearRect(0, 0, canvas.width, canvas.height);
 
   context.fillStyle = color;
