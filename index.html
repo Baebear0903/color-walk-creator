@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ff6b9a" />
+    <title>Colorwalk H5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Almendra+Display&family=Anton&family=Astloch:wght@700&family=Bebas+Neue&family=Berkshire+Swash&family=Bungee+Inline&family=Bungee+Shade&family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@500;600&family=Ewert&family=Fredericka+the+Great&family=Great+Vibes&family=Grenze+Gotisch:wght@600&family=IM+Fell+English+SC&family=Libre+Baskerville:wght@400;700&family=Libre+Bodoni:wght@400;700&family=Limelight&family=Lobster&family=MedievalSharp&family=Metamorphous&family=Monoton&family=Mystery+Quest&family=Pacifico&family=Parisienne&family=Playfair+Display:wght@600;700&family=Rubik+Dirt&family=Rye&family=Sacramento&family=Special+Elite&family=Ultra&family=UnifrakturCook:wght@700&family=Yesteryear&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="studio">
+        <header class="topbar">
+          <div>
+            <p class="kicker">Colorwalk</p>
+            <h1>一键生成色彩打卡图</h1>
+          </div>
+          <span class="live-chip">静态图</span>
+        </header>
+
+        <div class="preview-stage" aria-label="作品预览">
+          <canvas id="preview" width="540" height="720"></canvas>
+          <div id="empty-preview" class="preview-hint">
+            <span>上传素材后自动取色</span>
+          </div>
+        </div>
+
+        <p id="status" class="status">上传一张静态图片，生成后长按成图保存。</p>
+      </section>
+
+      <section class="controls" aria-label="编辑控制台">
+        <label class="upload-zone">
+          <input id="file-input" type="file" accept="image/*" />
+          <span class="upload-icon">+</span>
+          <span id="upload-label">选择静态图片</span>
+        </label>
+
+        <div class="field-row">
+          <label>
+            主色
+            <input id="color-input" type="color" value="#ff6b9a" />
+          </label>
+          <strong id="color-hex">#FF6B9A</strong>
+        </div>
+
+        <div class="color-tools" aria-label="主色取色方式">
+          <button id="auto-color-button" class="secondary-button" type="button" disabled>使用自动主色</button>
+          <button id="pick-color-button" class="secondary-button" type="button" disabled>点选取色</button>
+        </div>
+
+        <div id="swatches" class="swatches" aria-label="候选主色"></div>
+
+        <div class="field">
+          <span>色板位置</span>
+          <div id="palette-position" class="segment-control" aria-label="色板位置"></div>
+        </div>
+
+        <label class="field">
+          内容文本
+          <textarea id="content-text" maxlength="120" rows="4"></textarea>
+        </label>
+
+        <label class="field">
+          字体
+          <select id="font-select"></select>
+        </label>
+
+        <div class="actions">
+          <button id="generate-button" class="primary-button" type="button">生成静态图片</button>
+        </div>
+
+        <figure id="result-panel" class="result-panel" hidden>
+          <img id="result-image" alt="生成的 Colorwalk 静态图片" />
+          <figcaption>长按图片保存到相册</figcaption>
+        </figure>
+      </section>
+    </main>
+
+    <script type="module" src="./src/app.mjs"></script>
+  </body>
+</html>
