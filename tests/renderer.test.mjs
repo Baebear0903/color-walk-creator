@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { computeRegions } from '../src/renderer.mjs';
+import {
+  clampFontSize,
+  computeDefaultFontSize,
+  computeRegions,
+  wrapTextToLines,
+} from '../src/renderer.mjs';
 
 test('computeRegions places the media region below a top landscape palette', () => {
   const regions = computeRegions(540, 720, 'landscape', 'top');
@@ -29,4 +34,25 @@ test('computeRegions preserves portrait ratios for high-resolution output', () =
 
   assert.deepEqual(regions.palette, { x: 0, y: 0, width: 2000, height: 3000 });
   assert.deepEqual(regions.media, { x: 2000, y: 0, width: 2000, height: 3000 });
+});
+
+test('computeDefaultFontSize scales from the palette short side', () => {
+  assert.equal(computeDefaultFontSize({ width: 3000, height: 2000 }), 240);
+});
+
+test('clampFontSize constrains user sizes to mobile-safe bounds', () => {
+  const region = { width: 3000, height: 2000 };
+
+  assert.equal(clampFontSize(12, region), 24);
+  assert.equal(clampFontSize(999, region), 480);
+});
+
+test('wrapTextToLines wraps long text without truncating it', () => {
+  const context = {
+    measureText(text) {
+      return { width: text.length * 10 };
+    },
+  };
+
+  assert.deepEqual(wrapTextToLines(context, ['COLORWALK'], 35), ['COL', 'ORW', 'ALK']);
 });

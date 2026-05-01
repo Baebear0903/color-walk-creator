@@ -22,19 +22,42 @@
 
       <section class="workspace" aria-label="Colorwalk 编辑区">
         <figure id="result-panel" class="result-panel" hidden>
-          <img id="result-image" alt="生成的 Colorwalk 静态图片" />
+          <div class="result-frame">
+            <img id="result-image" alt="生成的 Colorwalk 静态图片" />
+            <div id="render-loading" class="render-loading" aria-live="polite" hidden>
+              <span class="loading-spinner" aria-hidden="true"></span>
+              <span>更新中</span>
+            </div>
+          </div>
           <figcaption>高清图片实时更新，长按保存</figcaption>
         </figure>
 
-        <div class="field-row">
-          <label>
-            主色
-            <input id="color-input" type="color" value="#ff6b9a" />
-          </label>
-          <strong id="color-hex">#FF6B9A</strong>
+        <div class="field color-field">
+          <span>主色</span>
+          <div class="color-readout" aria-label="当前主色">
+            <span id="color-preview" class="color-preview" aria-hidden="true"></span>
+            <strong id="color-hex">#FF6B9A</strong>
+          </div>
         </div>
 
         <div id="swatches" class="swatches" aria-label="候选主色"></div>
+
+        <div class="field">
+          <span>字体</span>
+          <div id="font-picker" class="font-picker" aria-label="字体"></div>
+        </div>
+
+        <div class="field">
+          <span>字体大小</span>
+          <div id="font-size-control" class="font-size-control" aria-label="字体大小">
+            <button id="font-size-decrease" type="button" aria-label="减小字体">-</button>
+            <label class="font-size-value-wrap">
+              <input id="font-size-value" type="number" min="24" step="4" inputmode="numeric" aria-label="字体大小数值" />
+              <span>px</span>
+            </label>
+            <button id="font-size-increase" type="button" aria-label="增大字体">+</button>
+          </div>
+        </div>
 
         <div class="field">
           <span>色板位置</span>
@@ -44,11 +67,6 @@
         <label class="field">
           内容文本
           <textarea id="content-text" maxlength="120" rows="4"></textarea>
-        </label>
-
-        <label class="field">
-          字体
-          <select id="font-select"></select>
         </label>
 
         <label class="reupload-link" for="file-input">重新上传</label>

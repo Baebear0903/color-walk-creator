@@ -1,9 +1,20 @@
 import { extractDominantColorFromPixels, normalizeHex, pickReadableTextColor, rgbToHex } from './color.mjs';
 import { fonts } from './fonts.mjs';
-import { createPosterState, getAllowedPalettePositions, getDefaultPalettePosition } from './layout.mjs';
+import {
+  computeOutputSizeFromCrop,
+  createPosterState,
+  getAllowedPalettePositions,
+  getDefaultPalettePosition,
+} from './layout.mjs';
 import { loadAsset, getSamplePixels } from './media.mjs';
 import { isPointInRegion, mapClientPointToCanvasPoint } from './picker.mjs';
-import { computeRegions, createPosterCanvas, renderPoster } from './renderer.mjs';
+import {
+  clampFontSize,
+  computeDefaultFontSize,
+  computeRegions,
+  createPosterCanvas,
+  renderPoster,
+} from './renderer.mjs';
 
 const state = {
   asset: null,
@@ -11,8 +22,10 @@ const state = {
   colorHex: '#FF6B9A',
   candidates: [],
   contentText: '#FF6B9A',
-  fontId: 'playfair',
+  fontId: fonts[0].id,
   fontFamily: fonts[0].family,
+  fontSizePx: 0,
+  fontSizeTouched: false,
   palettePosition: 'top',
   pickerActive: false,
   textColor: '#102033',
@@ -26,13 +39,17 @@ const elements = {
   fileInput: document.querySelector('#file-input'),
   uploadLabel: document.querySelector('#upload-label'),
   status: document.querySelector('#status'),
-  colorInput: document.querySelector('#color-input'),
+  colorPreview: document.querySelector('#color-preview'),
   colorHex: document.querySelector('#color-hex'),
   swatches: document.querySelector('#swatches'),
+  fontPicker: document.querySelector('#font-picker'),
+  fontSizeDecrease: document.querySelector('#font-size-decrease'),
+  fontSizeIncrease: document.querySelector('#font-size-increase'),
+  fontSizeValue: document.querySelector('#font-size-value'),
   palettePosition: document.querySelector('#palette-position'),
   contentText: document.querySelector('#content-text'),
-  fontSelect: document.querySelector('#font-select'),
   resultImage: document.querySelector('#result-image'),
+  renderLoading: document.querySelector('#render-loading'),
   resultPanel: document.querySelector('#result-panel'),
 };
 
@@ -42,26 +59,18 @@ const renderContext = canvas.getContext('2d', { willReadFrequently: true });
 init();
 
 function init() {
-  setupFonts();
   bindEvents();
   renderControls();
 }
 
-function setupFonts() {
-  fonts.forEach((font) => {
-    const option = document.createElement('option');
-    option.value = font.id;
-    option.textContent = font.label;
-    elements.fontSelect.append(option);
-  });
-}
-
 function bindEvents() {
   elements.fileInput.addEventListener('change', handleFileSelect);
-  elements.colorInput.addEventListener('input', handleColorInput);
   elements.resultImage.addEventListener('pointerdown', handleResultPointerDown);
   elements.contentText.addEventListener('input', () => updateTextState(elements.contentText.value));
-  elements.fontSelect.addEventListener('change', handleFontSelect);
+  elements.fontSizeDecrease.addEventListener('click', () => stepFontSize(-4));
+  elements.fontSizeIncrease.addEventListener('click', () => stepFontSize(4));
+  elements.fontSizeValue.addEventListener('change', commitFontSizeInput);
+  elements.fontSizeValue.addEventListener('keydown', handleFontSizeKeydown);
 }
 
 async function handleFileSelect(event) {
@@ -82,10 +91,13 @@ async function handleFileSelect(event) {
     state.pickerActive = false;
     state.palettePosition = nextPosterState.palettePosition;
     state.contentText = nextPosterState.contentText;
+    state.fontSizeTouched = false;
     applyColor(palette.primary.hex, false);
+    syncFontSize();
     elements.uploadLabel.textContent = '上传图片';
     elements.appShell.dataset.hasAsset = 'true';
     renderControls();
+    setLoading(true);
     await renderResult(++state.renderNonce);
   } catch (error) {
     state.asset = null;
@@ -94,13 +106,6 @@ async function handleFileSelect(event) {
   } finally {
     elements.fileInput.value = '';
   }
-}
-
-function handleColorInput(event) {
-  const next = normalizeHex(event.target.value);
-  if (!next) return;
-  applyColor(next, false);
-  scheduleRenderResult();
 }
 
 function handleToggleColorPicker() {
@@ -150,10 +155,40 @@ function updateTextState(value) {
   scheduleRenderResult();
 }
 
-function handleFontSelect(event) {
-  const selected = fonts.find((font) => font.id === event.target.value) || fonts[0];
+function handleFontSelect(fontId) {
+  const selected = fonts.find((font) => font.id === fontId) || fonts[0];
   state.fontId = selected.id;
   state.fontFamily = selected.family;
+  renderControls();
+  scheduleRenderResult();
+}
+
+function stepFontSize(delta) {
+  const region = getCurrentPaletteRegion();
+  state.fontSizeTouched = true;
+  state.fontSizePx = clampFontSize((state.fontSizePx || computeDefaultFontSize(region)) + delta, region);
+  renderControls();
+  scheduleRenderResult();
+}
+
+function handleFontSizeKeydown(event) {
+  if (event.key !== 'Enter') return;
+
+  event.preventDefault();
+  commitFontSizeInput();
+  elements.fontSizeValue.blur();
+}
+
+function commitFontSizeInput() {
+  const value = Number.parseInt(elements.fontSizeValue.value, 10);
+  if (!Number.isFinite(value)) {
+    renderControls();
+    return;
+  }
+
+  state.fontSizeTouched = true;
+  state.fontSizePx = clampFontSize(value, getCurrentPaletteRegion());
+  renderControls();
   scheduleRenderResult();
 }
 
@@ -161,6 +196,7 @@ function scheduleRenderResult() {
   if (!state.asset) return;
 
   const nonce = ++state.renderNonce;
+  setLoading(true);
   window.clearTimeout(state.renderTimer);
   state.renderTimer = window.setTimeout(() => {
     state.renderTimer = 0;
@@ -175,6 +211,7 @@ async function renderResult(nonce) {
     await document.fonts?.ready;
     if (!state.asset || nonce !== state.renderNonce) return;
 
+    syncFontSize();
     renderPoster(canvas, state.asset, state);
     const blob = await canvasToBlob(canvas, 'image/png', 0.95);
     if (!state.asset || nonce !== state.renderNonce) return;
@@ -185,13 +222,17 @@ async function renderResult(nonce) {
     setStatus(`高清图 ${canvas.width}x${canvas.height} 已更新，长按保存。`);
   } catch (error) {
     setStatus(error.message, true);
+  } finally {
+    if (nonce === state.renderNonce) {
+      setLoading(false);
+    }
   }
 }
 
 function applyColor(hex, updateText) {
   state.colorHex = hex;
   state.textColor = pickReadableTextColor(hex);
-  elements.colorInput.value = hex;
+  elements.colorPreview.style.background = hex;
   elements.colorHex.textContent = hex;
 
   if (updateText) {
@@ -203,12 +244,13 @@ function applyColor(hex, updateText) {
 
 function renderControls() {
   elements.contentText.value = state.contentText;
-  elements.fontSelect.value = state.fontId;
-  elements.colorInput.value = state.colorHex;
+  elements.colorPreview.style.background = state.colorHex;
   elements.colorHex.textContent = state.colorHex;
+  elements.fontSizeValue.value = state.fontSizePx || '';
   elements.resultImage.dataset.picking = state.pickerActive ? 'true' : 'false';
   renderPalettePositionControls();
   renderSwatches();
+  renderFontPicker();
 }
 
 function renderSwatches() {
@@ -244,6 +286,22 @@ function renderSwatches() {
   elements.swatches.append(pickButton);
 }
 
+function renderFontPicker() {
+  elements.fontPicker.replaceChildren();
+
+  fonts.forEach((font) => {
+    const button = document.createElement('button');
+    button.className = 'font-option';
+    button.type = 'button';
+    button.textContent = font.label;
+    button.style.fontFamily = font.family;
+    button.dataset.active = font.id === state.fontId ? 'true' : 'false';
+    button.setAttribute('aria-label', `选择字体 ${font.label}`);
+    button.addEventListener('click', () => handleFontSelect(font.id));
+    elements.fontPicker.append(button);
+  });
+}
+
 function renderPalettePositionControls() {
   const orientation = state.asset?.orientation || 'landscape';
   const allowedPositions = getAllowedPalettePositions(orientation);
@@ -267,6 +325,7 @@ function renderPalettePositionControls() {
     button.dataset.active = position === state.palettePosition ? 'true' : 'false';
     button.addEventListener('click', () => {
       state.palettePosition = position;
+      syncFontSize();
       renderControls();
       scheduleRenderResult();
     });
@@ -295,6 +354,34 @@ function clearResultImage() {
   state.resultUrl = '';
   elements.resultImage.removeAttribute('src');
   elements.resultPanel.hidden = true;
+  setLoading(false);
+}
+
+function syncFontSize() {
+  if (!state.asset) return;
+
+  const region = getCurrentPaletteRegion();
+  state.fontSizePx = state.fontSizeTouched
+    ? clampFontSize(state.fontSizePx, region)
+    : computeDefaultFontSize(region);
+}
+
+function getCurrentPaletteRegion() {
+  if (!state.asset) {
+    return { width: 540, height: 360 };
+  }
+
+  const outputSize = computeOutputSizeFromCrop(state.asset.cropRect, state.asset.orientation);
+  return computeRegions(
+    outputSize.width,
+    outputSize.height,
+    state.asset.orientation,
+    state.palettePosition,
+  ).palette;
+}
+
+function setLoading(isLoading) {
+  elements.renderLoading.hidden = !isLoading;
 }
 
 function setStatus(message, isError = false) {
